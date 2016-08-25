@@ -78,7 +78,7 @@ module Milia
         end
 
       end
-      
+
 # ------------------------------------------------------------------------
 # acts_as_universal_and_determines_tenant_reference
 # All the characteristics of acts_as_universal AND also does the magic
@@ -90,32 +90,35 @@ module Milia
 
         acts_as_universal()
 
-           # validate that a tenant exists prior to a user creation
-        before_create do |new_user|
-          if Thread.current[:tenant_id].blank? ||
-             !Thread.current[:tenant_id].kind_of?(Integer) ||
-             Thread.current[:tenant_id].zero?
+        #INFO VP allow users without a tenant
+          # validate that a tenant exists prior to a user creation
+#        before_create do |new_user|
+#          if Thread.current[:tenant_id].blank? ||
+#             !Thread.current[:tenant_id].kind_of?(Integer) ||
+#             Thread.current[:tenant_id].zero?
+#
+#            raise ::Milia::Control::InvalidTenantAccess,"no existing valid current tenant"
+#          end
+#        end  # before create callback do
 
-            raise ::Milia::Control::InvalidTenantAccess,"no existing valid current tenant" 
-
-          end
-        end  # before create callback do
-        
+        #INFO VP allow users without a tenant
+        #TODO VP check how invitations are handled if this does not allow users
+        # to accidentaly become members of wrong tenant
           # before create, tie user with current tenant
           # return true if ok to proceed; false if break callback chain
         after_create do |new_user|
-          tenant = Tenant.find( Thread.current[:tenant_id] )
-          unless tenant.users.include?(new_user)
+          tenant = Tenant.where( id: Thread.current[:tenant_id] ).first
+          if tenant.present? && !tenant.users.include?(new_user)
             tenant.users << new_user  # add user to this tenant if not already there
           end
 
         end # before_create do
-        
+
         before_destroy do |old_user|
           old_user.tenants.clear    # remove all tenants for this user
           true
         end # before_destroy do
-        
+
       end  # acts_as
 
 # ------------------------------------------------------------------------
@@ -124,7 +127,7 @@ module Milia
     has_and_belongs_to_many :users
 
     acts_as_universal()
-    
+
     before_destroy do |old_tenant|
       old_tenant.users.clear  # remove all users from this tenant
       true
@@ -147,16 +150,16 @@ module Milia
 
     rescue ActiveRecord::RecordNotFound
       return nil
-    end   
+    end
   end
-    
+
 # ------------------------------------------------------------------------
 # current_tenant_id -- returns tenant_id for current tenant
 # ------------------------------------------------------------------------
   def current_tenant_id()
     return Thread.current[:tenant_id]
   end
-  
+
 # ------------------------------------------------------------------------
 # set_current_tenant -- model-level ability to set the current tenant
 # NOTE: *USE WITH CAUTION* normally this should *NEVER* be done from
@@ -171,7 +174,7 @@ module Milia
       else
         raise ArgumentError, "invalid tenant object or id"
     end  # case
-    
+
     old_id = ( Thread.current[:tenant_id].nil? ? '%' : Thread.current[:tenant_id] )
     Thread.current[:tenant_id] = tenant_id
     logger.debug("MILIA >>>>> [Tenant#change_tenant] new: #{tenant_id}\told:#{old_id}") unless logger.nil?
@@ -179,7 +182,7 @@ module Milia
   end
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------
- 
+
 # ------------------------------------------------------------------------
 # where_restrict_tenant -- gens tenant restrictive where clause for each klass
 # NOTE: subordinate join tables will not get the default scope by Rails
@@ -191,7 +194,7 @@ module Milia
   def where_restrict_tenant(*args)
     args.map{|klass| "#{klass.table_name}.tenant_id = #{Thread.current[:tenant_id]}"}.join(" AND ")
   end
-  
+
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------
 
@@ -204,6 +207,6 @@ module Milia
     end  # module ClassMethods
 # #############################################################################
 # #############################################################################
-    
+
   end  # module Base
 end  # module Milia
