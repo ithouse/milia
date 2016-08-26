@@ -86,7 +86,9 @@ module Milia
 # ------------------------------------------------------------------------
       def acts_as_universal_and_determines_account()
         include ::Milia::InviteMember
-        has_and_belongs_to_many :tenants
+
+        has_many :tenant_members
+        has_many :tenants, through: :tenant_members
 
         acts_as_universal()
 
@@ -124,7 +126,8 @@ module Milia
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------
   def acts_as_universal_and_determines_tenant()
-    has_and_belongs_to_many :users
+    has_many :tenant_members
+    has_many :users, through: :tenant_members
 
     acts_as_universal()
 
