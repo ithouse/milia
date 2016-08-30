@@ -17,18 +17,18 @@ module Milia
         belongs_to  :tenant
         validates_presence_of :tenant_id
 
-        default_scope lambda { where( "#{table_name}.tenant_id = ?", Thread.current[:tenant_id] ) }
+        default_scope lambda { where( "#{table_name}.tenant_id = ?", RequestStore.store[:tenant_id] ) }
 
       # ..........................callback enforcers............................
         before_validation(:on => :create) do |obj|   # force tenant_id to be correct for current_user
-          obj.tenant_id = Thread.current[:tenant_id]
+          obj.tenant_id = RequestStore.store[:tenant_id]
           true  #  ok to proceed
         end
 
       # ..........................callback enforcers............................
         before_save do |obj|   # force tenant_id to be correct for current_user
           # raise exception if updates attempted on wrong data
-          raise ::Milia::Control::InvalidTenantAccess unless obj.tenant_id == Thread.current[:tenant_id]
+          raise ::Milia::Control::InvalidTenantAccess unless obj.tenant_id == RequestStore.store[:tenant_id]
           true  #  ok to proceed
         end
 
@@ -36,13 +36,13 @@ module Milia
         # no longer needed because before_save invoked prior to before_update
         #
 #         before_update do |obj|   # force tenant_id to be correct for current_user
-#           raise ::Milia::Control::InvalidTenantAccess unless obj.tenant_id == Thread.current[:tenant_id]
+#           raise ::Milia::Control::InvalidTenantAccess unless obj.tenant_id == RequestStore.store[:tenant_id]
 #           true  #  ok to proceed
 #         end
 
       # ..........................callback enforcers............................
         before_destroy do |obj|   # force tenant_id to be correct for current_user
-          raise ::Milia::Control::InvalidTenantAccess unless obj.tenant_id == Thread.current[:tenant_id]
+          raise ::Milia::Control::InvalidTenantAccess unless obj.tenant_id == RequestStore.store[:tenant_id]
           true  #  ok to proceed
         end
 
@@ -95,9 +95,9 @@ module Milia
         #INFO VP allow users without a tenant
           # validate that a tenant exists prior to a user creation
 #        before_create do |new_user|
-#          if Thread.current[:tenant_id].blank? ||
-#             !Thread.current[:tenant_id].kind_of?(Integer) ||
-#             Thread.current[:tenant_id].zero?
+#          if RequestStore.store[:tenant_id].blank? ||
+#             !RequestStore.store[:tenant_id].kind_of?(Integer) ||
+#             RequestStore.store[:tenant_id].zero?
 #
 #            raise ::Milia::Control::InvalidTenantAccess,"no existing valid current tenant"
 #          end
@@ -109,7 +109,7 @@ module Milia
           # before create, tie user with current tenant
           # return true if ok to proceed; false if break callback chain
         after_create do |new_user|
-          tenant = Tenant.where( id: Thread.current[:tenant_id] ).first
+          tenant = Tenant.where( id: RequestStore.store[:tenant_id] ).first
           if tenant.present? && !tenant.users.include?(new_user)
             tenant.users << new_user  # add user to this tenant if not already there
           end
@@ -144,9 +144,9 @@ module Milia
   def current_tenant()
     begin
       tenant = (
-        Thread.current[:tenant_id].blank?  ?
+        RequestStore.store[:tenant_id].blank?  ?
         nil  :
-        Tenant.find( Thread.current[:tenant_id] )
+        Tenant.find( RequestStore.store[:tenant_id] )
       )
 
       return tenant
@@ -160,7 +160,7 @@ module Milia
 # current_tenant_id -- returns tenant_id for current tenant
 # ------------------------------------------------------------------------
   def current_tenant_id()
-    return Thread.current[:tenant_id]
+    return RequestStore.store[:tenant_id]
   end
 
 # ------------------------------------------------------------------------
@@ -178,8 +178,8 @@ module Milia
         raise ArgumentError, "invalid tenant object or id"
     end  # case
 
-    old_id = ( Thread.current[:tenant_id].nil? ? '%' : Thread.current[:tenant_id] )
-    Thread.current[:tenant_id] = tenant_id
+    old_id = ( RequestStore.store[:tenant_id].nil? ? '%' : RequestStore.store[:tenant_id] )
+    RequestStore.store[:tenant_id] = tenant_id
     logger.debug("MILIA >>>>> [Tenant#change_tenant] new: #{tenant_id}\told:#{old_id}") unless logger.nil?
 
   end
@@ -195,7 +195,7 @@ module Milia
 # for each of the subordinate models in the join seems like a nice safety issue.
 # ------------------------------------------------------------------------
   def where_restrict_tenant(*args)
-    args.map{|klass| "#{klass.table_name}.tenant_id = #{Thread.current[:tenant_id]}"}.join(" AND ")
+    args.map{|klass| "#{klass.table_name}.tenant_id = #{RequestStore.store[:tenant_id]}"}.join(" AND ")
   end
 
 # ------------------------------------------------------------------------

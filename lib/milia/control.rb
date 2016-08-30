@@ -23,9 +23,9 @@ module Milia
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
   def __milia_change_tenant!( tid )
-    old_id = ( Thread.current[:tenant_id].nil? ? '%' : Thread.current[:tenant_id] )
+    old_id = ( RequestStore.store[:tenant_id].nil? ? '%' : RequestStore.store[:tenant_id] )
     new_id = ( tid.nil? ? '%' : tid.to_s )
-    Thread.current[:tenant_id] = tid
+    RequestStore.store[:tenant_id] = tid
     session[:tenant_id] = tid  # remember it going forward
     logger.debug("MILIA >>>>> [change tenant] new: #{new_id}\told: #{old_id}") unless logger.nil?
   end
@@ -41,7 +41,7 @@ module Milia
 # ------------------------------------------------------------------------------
   def trace_tenanting( fm_msg )
     if ::Milia.trace_on
-      tid = ( session[:tenant_id].nil? ? "%/#{Thread.current[:tenant_id]}" : session[:tenant_id].to_s )
+      tid = ( session[:tenant_id].nil? ? "%/#{RequestStore.store[:tenant_id]}" : session[:tenant_id].to_s )
       uid = ( current_user.nil?  ?  "%/#{session[:user_id]}"  : "#{current_user.id}")
       logger.debug(
          "MILIA >>>>> [#{fm_msg}] stid: #{tid}\tuid: #{uid}\tus-in: #{user_signed_in?}"
