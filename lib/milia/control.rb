@@ -68,7 +68,10 @@ module Milia
             tenant_id = @_my_tenants.first.id  # just pick the first one
           end
         else   # validate the specified tenant_id before setup
-          raise InvalidTenantAccess unless @_my_tenants.any?{|tu| tu.id == tenant_id}
+          unless @_my_tenants.any?{|tu| tu.id == tenant_id}
+            session[:tenant_id] = nil
+            raise InvalidTenantAccess
+          end
         end
 
       else   # user not signed in yet... INFO VP we'll have users that have no tenants yet
