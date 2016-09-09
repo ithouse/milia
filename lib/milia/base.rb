@@ -17,7 +17,7 @@ module Milia
         belongs_to  :tenant
         validates_presence_of :tenant_id
 
-        default_scope lambda { where( "#{table_name}.tenant_id = ?", RequestStore.store[:tenant_id] ) }
+        #default_scope lambda { where( "#{table_name}.tenant_id = ?", RequestStore.store[:tenant_id] ) }
 
       # ..........................callback enforcers............................
         before_validation(:on => :create) do |obj|   # force tenant_id to be correct for current_user
@@ -55,7 +55,7 @@ module Milia
       def acts_as_universal()
         belongs_to  :tenant
 
-        default_scope { where( "#{table_name}.tenant_id IS NULL" ) }
+        #default_scope { where( "#{table_name}.tenant_id IS NULL" ) }
 
       # ..........................callback enforcers............................
         before_save do |obj|   # force tenant_id to be universal
